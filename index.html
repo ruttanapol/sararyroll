@@ -6,12 +6,203 @@
     <title>ระบบจัดการเงินเดือน - พระยาสัจจา V6.0 (Cloud Database Edition)</title>
     
     <!-- นำเข้า Library ของ Firebase -->
-    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
+    // --- เปลี่ยนฟังก์ชัน saveEmployee ใหม่ให้มีสถานะโหลดชัดเจน ---
+    async function saveEmployee() {
+        const name = document.getElementById('in-name').value.trim();
+        if(!name) return alert("ระบุชื่อพนักงาน");
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+        // เพิ่มการล็อกปุ่มและแสดงสถานะ
+        const btn = document.querySelector('#page-form .btn-main');
+        const origText = btn.innerText;
+        btn.innerText = "⏳ กำลังบันทึกขึ้น Cloud...";
+        btn.disabled = true;
+
+        let e;
+        if(editingEmpId) {
+            e = employees.find(x => x.id === editingEmpId);
+            e.name = name;
+            e.fullname = document.getElementById('in-fullname').value.trim();
+            e.email = document.getElementById('in-email').value.trim();
+            e.branch = document.getElementById('in-branch').value;
+            e.role = document.getElementById('in-role').value;
+            e.bankName = document.getElementById('in-bank-name').value.trim();
+            e.bankNo = document.getElementById('in-bank-no').value.trim();
+            if(tempImgBase64) e.photo = tempImgBase64;
+            e.wage = parseFloat(document.getElementById('in-wage').value) || 0;
+            e.otRate = parseFloat(document.getElementById('in-ot').value) || 0;
+            editingEmpId = null;
+        } else {
+            e = {
+                id: 'id_' + Date.now(),
+                name: name,
+                fullname: document.getElementById('in-fullname').value.trim(),
+                email: document.getElementById('in-email').value.trim(),
+                branch: document.getElementById('in-branch').value,
+                role: document.getElementById('in-role').value,
+                bankName: document.getElementById('in-bank-name').value.trim(),
+                bankNo: document.getElementById('in-bank-no').value.trim(),
+                photo: tempImgBase64,
+                wage: parseFloat(document.getElementById('in-wage').value) || 0,
+                otRate: parseFloat(document.getElementById('in-ot').value) || 0,
+                bonus: 0, withdraw: 0, withdraw2: 0, other: 0, social: 0, latePenalty: 0,
+                logs: {}
+            };
+            employees.push(e);
+        }
+        
+        try {
+            await db.collection('employees').doc(e.id).set(e);
+            tempImgBase64 = ""; 
+            showPage('main');
+        } catch (error) {
+            console.error(error);
+            alert("บันทึกข้อมูลล้มเหลว กรุณาตรวจสอบอินเทอร์เน็ต");
+        } finally {
+            btn.innerText = origText;
+            btn.disabled = false;
+        }
+    }
+
+    // --- เปลี่ยนฟังก์ชัน handleFileUpload ใหม่ให้แบ่งข้อมูลส่ง (Chunking) เพื่อให้เร็วขึ้น ---
+    function handleFileUpload(periodType, targetBranch, fileInputId) {
+        if(currentUserRole !== 'admin') return alert("เฉพาะผู้ดูแลระบบเท่านั้น");
+        
+        const file = document.getElementById(fileInputId).files[0];
+        if(!file) return alert("กรุณาเลือกไฟล์ Excel ก่อนครับ");
+
+        // ป้องกันการกดซ้ำ และแสดงสถานะกำลังโหลด
+        const uploadBtn = document.activeElement;
+        const origBtnText = uploadBtn.innerText;
+        uploadBtn.innerText = "⏳ กำลังอ่านไฟล์ Excel...";
+        uploadBtn.disabled = true;
+
+        localStorage.setItem('current_period', periodType);
+
+        const reader = new FileReader();
+        reader.onload = async function(ev) {
+            try {
+                const data = new Uint8Array(ev.target.result);
+                const wb = XLSX.read(data, {type: 'array'});
+                const targetSheetName = wb.SheetNames.find(s => s.includes("บันทึกเวลาทำงาน")) || wb.SheetNames[0];
+                const rows = XLSX.utils.sheet_to_json(wb.Sheets[targetSheetName], {header: 1});
+                
+                let periodText = "";
+                for (let r = 0; r < Math.min(5, rows.length); r++) {
+                    if (!rows[r]) continue;
+                    for (let c = 0; c < rows[r].length; c++) {
+                        const cell = String(rows[r][c] || '');
+                        if (cell.includes('ช่วงเวลา:')) {
+                            periodText = cell.replace('ช่วงเวลา:', '').trim();
+                            if (!periodText && rows[r][c+1]) periodText = String(rows[r][c+1]).trim();
+                            break;
+                        }
+                    }
+                    if (periodText) break;
+                }
+                if (periodText) localStorage.setItem('current_month_text', periodText);
+
+                let headers = [];
+                for(let r=0; r<Math.min(10, rows.length); r++) {
+                    if (rows[r] && (rows[r][0] === 1 || rows[r][0] === 15 || rows[r][0] === 16 || rows[r][1] === 1 || rows[r][1] === 16)) {
+                        headers = rows[r]; break;
+                    }
+                }
+
+                let count = 0;
+                const updatedEmps = new Set();
+
+                for(let r=0; r<rows.length; r++) {
+                    const row = rows[r];
+                    if(!row) continue;
+                    
+                    let rawName = "";
+                    for(let c=0; c<row.length; c++) {
+                        if(String(row[c]).includes("ชื่อ:")) {
+                            rawName = String(row[c+1] || row[c+2] || row[c+3] || '').trim();
+                            break;
+                        }
+                    }
+
+                    if(rawName) {
+                        const emp = employees.find(x => x.name.replace(/\s/g,'').toLowerCase() === rawName.replace(/\s/g,'').toLowerCase() && x.branch === targetBranch);
+                        if(emp && r + 1 < rows.length) {
+                            const timeRow = rows[r+1];
+                            if (periodType === 1) { for(let i=1; i<=15; i++) delete emp.logs[i]; } 
+                            else { for(let i=16; i<=31; i++) delete emp.logs[i]; }
+                            
+                            for(let colIdx = 0; colIdx < timeRow.length; colIdx++) {
+                                const day = headers[colIdx];
+                                const cellVal = String(timeRow[colIdx] || '').replace(/\s/g, ''); 
+                                
+                                if(day && !isNaN(day) && cellVal) {
+                                    const parsedDay = parseInt(day);
+                                    if (periodType === 1 && (parsedDay < 1 || parsedDay > 15)) continue;
+                                    if (periodType === 2 && (parsedDay < 16 || parsedDay > 31)) continue;
+
+                                    if (cellVal.length >= 9 && cellVal.includes(':')) {
+                                        const tIn = cellVal.substring(0, 5); 
+                                        const tOut = cellVal.substring(5, 10); 
+                                        if(tIn && tOut) {
+                                            const mIn = toM(tIn);
+                                            let mOut = toM(tOut);
+                                            if(mOut < mIn) mOut += 1440; 
+
+                                            const shifts = [540, 600, 840, 1080];
+                                            const officialStart = shifts.reduce((prev, curr) => Math.abs(curr - mIn) < Math.abs(prev - mIn) ? curr : prev);
+                                            const lateMins = mIn > officialStart ? mIn - officialStart : 0;
+                                            
+                                            const calcStart = officialStart; 
+                                            const calcEnd = Math.floor(mOut / 60) * 60;
+                                            let totalWorkMins = calcEnd - calcStart;
+                                            if(totalWorkMins < 0) totalWorkMins = 0;
+                                            
+                                            const totalHrs = totalWorkMins / 60;
+                                            const otHrs = totalHrs > 9 ? totalHrs - 9 : 0;
+                                            const normalHrs = totalHrs > 9 ? 9 : totalHrs;
+
+                                            emp.logs[parsedDay] = { time: tIn + " - " + tOut, workHrs: normalHrs, ot: otHrs, lateMins: lateMins };
+                                            updatedEmps.add(emp);
+                                        }
+                                    }
+                                }
+                            }
+                            count++;
+                        }
+                    }
+                }
+
+                uploadBtn.innerText = `⏳ กำลังส่งข้อมูล (${updatedEmps.size} คน) ขึ้น Cloud...`;
+
+                // ระบบ Chunking: ทยอยส่งทีละ 100 คน ป้องกันระบบล่มและลดคอขวด
+                const updatedArray = Array.from(updatedEmps);
+                const chunkSize = 100; 
+                
+                for (let i = 0; i < updatedArray.length; i += chunkSize) {
+                    const chunk = updatedArray.slice(i, i + chunkSize);
+                    const batch = db.batch();
+                    chunk.forEach(emp => {
+                        const ref = db.collection('employees').doc(emp.id);
+                        batch.set(ref, emp);
+                    });
+                    await batch.commit(); // ทยอยอัปโหลดทีละกลุ่ม
+                }
+                
+                const msg = periodType === 1 ? "ต้นเดือน" : "ปลายเดือน";
+                alert(`อัปโหลดขึ้น Cloud สำเร็จ! (${msg} สาขา${targetBranch})\nอัปเดตข้อมูลพนักงานทั้งหมด ${count} คน`); 
+                showPage('main');
+
+            } catch (err) {
+                console.error("Firestore Save Error:", err);
+                alert("เกิดข้อผิดพลาดในการประมวลผลไฟล์ หรือส่งข้อมูลขึ้นระบบ Cloud");
+            } finally {
+                // คืนค่าปุ่มกลับมาให้กดได้ปกติ
+                uploadBtn.innerText = origBtnText;
+                uploadBtn.disabled = false;
+                document.getElementById(fileInputId).value = ""; // เคลียร์ไฟล์เก่าออก
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    }</script>
     
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap');
