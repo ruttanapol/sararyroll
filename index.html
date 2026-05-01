@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ระบบจัดการเงินเดือน - พระยาสัจจา V7.1 (Supabase Online)</title>
+    <title>ระบบจัดการเงินเดือน - พระยาสัจจา V7.0 (Supabase Cloud)</title>
     
-    <!-- นำเข้า Supabase แทน Firebase -->
+    <!-- นำเข้า Supabase Library -->
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -111,6 +111,7 @@
 <body>
 
 <div class="container">
+    <!-- หน้า Login -->
     <div id="page-login" class="card" style="max-width: 400px; margin: 10vh auto; text-align: center;">
         <div style="font-size: 50px; margin-bottom: 10px;">🔐</div>
         <h2 style="color:var(--primary);">เข้าสู่ระบบจัดการเงินเดือน</h2>
@@ -119,13 +120,15 @@
         <button class="btn btn-main" style="width: 100%;" onclick="doLogin()">🚀 เข้าสู่ระบบ</button>
     </div>
 
+    <!-- เมนูหลัก -->
     <div class="nav-bar hidden" id="main-nav">
         <button class="btn btn-main" id="nav-home" onclick="showPage('main')">🏠 หน้าแรก</button>
         <button class="btn btn-upload" id="nav-upload" onclick="showPage('upload')">📂 อัพโหลดไฟล์</button>
         <button class="btn btn-pdf" id="nav-pdf" onclick="exportPDF()">📄 ดาวน์โหลด PDF</button>
-        <button class="btn btn-danger" style="margin-left:auto;" onclick="location.reload()">🚪 ออกจากระบบ</button>
+        <button class="btn btn-danger" style="margin-left:auto;" onclick="doLogout()">🚪 ออกจากระบบ</button>
     </div>
 
+    <!-- หน้า Dashboard -->
     <div id="page-main" class="hidden">
         <div style="display:flex; justify-content:space-between; margin-bottom:20px;">
             <h2 style="margin:0;">Dashboard พนักงาน</h2>
@@ -134,6 +137,7 @@
         <div class="emp-grid" id="list-grid"></div>
     </div>
 
+    <!-- หน้าอัพโหลด Excel -->
     <div id="page-upload" class="hidden card">
         <h3 style="text-align:center;">อัพโหลดไฟล์ Excel (แยกตามรอบ)</h3>
         <div class="input-row">
@@ -160,6 +164,7 @@
         </div>
     </div>
 
+    <!-- หน้าฟอร์มพนักงาน -->
     <div id="page-form" class="hidden card">
         <h3 id="form-title">ลงทะเบียนพนักงาน</h3>
         <div class="input-row">
@@ -197,6 +202,7 @@
         </div>
     </div>
 
+    <!-- หน้าโปรไฟล์เงินเดือน -->
     <div id="page-profile" class="hidden">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
             <div style="display:flex; align-items:center; gap:15px;">
@@ -230,7 +236,7 @@
 
         <div class="card table-responsive" style="padding:0;">
             <table>
-                <thead><tr><th>วันที่</th><th>เวลาเข้า-ออก</th><th>ชม.</th><th>OT</th><th>สาย</th></tr></thead>
+                <thead><tr><th>วันที่</th><th>เวลา</th><th>ชม.</th><th>OT</th><th>สาย</th></tr></thead>
                 <tbody id="log-table-body"></tbody>
             </table>
         </div>
@@ -239,10 +245,10 @@
 </div>
 
 <script>
-    // --- เปลี่ยนมาใช้ Supabase ---
-    const S_URL = 'https://kqwajgklgokhwvwjuicw.supabase.co';
-    const S_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtxd2FqZ2tsZ29raHd2d2p1aWN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc2NTQ1NDAsImV4cCI6MjA5MzIzMDU0MH0.6Ye_tTze_Q8VmPAzemtm6wpaalFGNRiZtY7gI2hBScA';
-    const supabaseClient = supabase.createClient(S_URL, S_KEY);
+    // ตั้งค่า Supabase
+    const SUPABASE_URL = 'https://kqwajgklgokhwvwjuicw.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtxd2FqZ2tsZ29raHd2d2p1aWN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc2NTQ1NDAsImV4cCI6MjA5MzIzMDU0MH0.6Ye_tTze_Q8VmPAzemtm6wpaalFGNRiZtY7gI2hBScA';
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     let employees = [];
     let curId = null;
@@ -253,10 +259,10 @@
     async function doLogin() {
         const input = document.getElementById('login-email').value.trim();
         const btn = document.querySelector('#page-login .btn-main');
-        btn.disabled = true; btn.innerText = "⏳ กำลังเชื่อมต่อ...";
+        btn.disabled = true; btn.innerText = "กำลังเชื่อมต่อ...";
 
         try {
-            const { data, error } = await supabaseClient.from('employees').select('*');
+            const { data, error } = await supabase.from('employees').select('*');
             if(error) throw error;
             employees = data;
 
@@ -265,17 +271,25 @@
                 document.getElementById('main-nav').classList.remove('hidden');
                 showPage('main');
             } else {
-                const emp = employees.find(e => e.email.toLowerCase() === input.toLowerCase());
+                const emp = employees.find(e => e.email && e.email.toLowerCase() === input.toLowerCase());
                 if(emp) {
                     userRole = 'employee';
                     document.getElementById('main-nav').classList.remove('hidden');
                     document.getElementById('nav-home').classList.add('hidden');
                     document.getElementById('nav-upload').classList.add('hidden');
                     openProfile(emp.id);
-                } else { alert("ไม่พบข้อมูลผู้ใช้"); }
+                } else {
+                    alert("ไม่พบข้อมูลผู้ใช้");
+                }
             }
-        } catch (e) { alert("เชื่อมต่อไม่ได้: " + e.message); }
+        } catch (e) { alert("Error: " + e.message); }
         finally { btn.disabled = false; btn.innerText = "🚀 เข้าสู่ระบบ"; }
+    }
+
+    function doLogout() {
+        userRole = null; curId = null;
+        document.getElementById('main-nav').classList.add('hidden');
+        showPage('login');
     }
 
     function showPage(p) {
@@ -324,6 +338,7 @@
     async function saveEmployee() {
         const btn = document.getElementById('btn-save');
         btn.disabled = true; btn.innerText = "⏳ บันทึก...";
+
         const payload = {
             id: editingId || 'id_'+Date.now(),
             name: document.getElementById('in-name').value,
@@ -338,9 +353,10 @@
             photo: tempPhoto,
             logs: editingId ? (employees.find(x=>x.id===editingId).logs || {}) : {}
         };
-        const { error } = await supabaseClient.from('employees').upsert(payload);
+
+        const { error } = await supabase.from('employees').upsert(payload);
         if(!error) {
-            const { data } = await supabaseClient.from('employees').select('*');
+            const { data } = await supabase.from('employees').select('*');
             employees = data; showPage('main');
         } else { alert("Error: " + error.message); }
         btn.disabled = false; btn.innerText = "💾 บันทึก";
@@ -349,13 +365,17 @@
     async function openProfile(id) {
         curId = id; const e = employees.find(x => x.id === id);
         const isAdmin = (userRole === 'admin');
+
         document.getElementById('btn-del').style.display = isAdmin ? 'block' : 'none';
         document.querySelectorAll('#page-profile input').forEach(i => i.disabled = !isAdmin);
+
         document.getElementById('view-name').innerText = e.name;
         document.getElementById('view-branch-badge').innerText = e.branch;
         document.getElementById('view-bank-info').innerText = `${e.bankName} - ${e.bankNo}`;
         document.getElementById('view-photo-container').innerHTML = e.photo ? `<img src="${e.photo}" class="profile-img">` : `<div class="profile-img">👤</div>`;
+
         ['bonus','withdraw','withdraw2','other','social'].forEach(f => document.getElementById('adj-'+f).value = e[f] || 0);
+
         updateCalc(false);
         showPage('profile');
     }
@@ -365,33 +385,36 @@
         if(userRole === 'admin') {
             ['bonus','withdraw','withdraw2','other','social'].forEach(f => e[f] = parseFloat(document.getElementById('adj-'+f).value) || 0);
         }
+
         let totalWage = 0, totalOT = 0;
         const tbody = document.getElementById('log-table-body'); tbody.innerHTML = '';
+        
         Object.keys(e.logs || {}).forEach(day => {
             const l = e.logs[day];
             totalWage += (e.role === 'FT' ? e.wage : (e.wage/9)*l.workHrs);
             totalOT += (l.ot * e.otRate);
             tbody.innerHTML += `<tr><td>${day}</td><td>${l.time}</td><td>${l.workHrs}</td><td>${l.ot}</td><td>${l.lateMins}</td></tr>`;
         });
+
         const net = (totalWage + totalOT + e.bonus) - (e.withdraw + e.withdraw2 + e.other + e.social);
         document.getElementById('res-wage').innerText = Math.round(totalWage).toLocaleString();
         document.getElementById('res-ot').innerText = Math.round(totalOT).toLocaleString();
         document.getElementById('res-net').innerText = Math.round(net).toLocaleString();
+
         if(shouldSave && userRole === 'admin') {
-            supabaseClient.from('employees').upsert(e).then();
+            supabase.from('employees').upsert(e).then();
         }
     }
 
     async function handleFileUpload(p) {
         const file = document.getElementById('file-'+p).files[0];
-        const branch = document.getElementById('sel-branch-'+p).value;
         if(!file) return alert("กรุณาเลือกไฟล์");
+
         const reader = new FileReader();
         reader.onload = async (ev) => {
             const wb = XLSX.read(new Uint8Array(ev.target.result), {type:'array'});
-            const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {header:1});
-            // Logic ประมวลผล... (เหมือนเดิม)
-            alert("ประมวลผลเสร็จสิ้น");
+            // ... กระบวนการอ่านไฟล์ Excel จะต้องสอดคล้องกับโครงสร้างพนักงานใน Supabase ...
+            alert("อัพโหลดสำเร็จ (จำลอง)"); 
             showPage('main');
         };
         reader.readAsArrayBuffer(file);
@@ -399,13 +422,14 @@
 
     async function deleteEmployee() {
         if(confirm("ยืนยันการลบ?")) {
-            await supabaseClient.from('employees').delete().eq('id', curId);
-            const { data } = await supabaseClient.from('employees').select('*');
+            await supabase.from('employees').delete().eq('id', curId);
+            const { data } = await supabase.from('employees').select('*');
             employees = data; showPage('main');
         }
     }
 
-    function exportPDF() { alert("กำลังสร้าง PDF..."); }
+    function exportPDF() { alert("กำลังเตรียม PDF..."); }
+    function toM(s) { if(!s) return 0; const p = s.split(':'); return (parseInt(p[0])*60)+(parseInt(p[1])||0); }
 </script>
 </body>
 </html>
