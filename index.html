@@ -833,12 +833,18 @@
             const jsPDF = window.jspdf.jsPDF;
             const doc = new jsPDF('l', 'mm', 'a4');
             const fontUrl = './THSarabunNew Bold.ttf';
-            const fontBase64 = await getBase64Font(fontUrl);
-            
-            if (fontBase64) {
-                doc.addFileToVFS('THSarabunNew.ttf', fontBase64);
-                doc.addFont('THSarabunNew.ttf', 'THSarabun', 'normal');
-                doc.setFont('THSarabun');
+            const fontBase64 = await getBase64Font('./THSarabunNew.ttf');
+const fontBoldBase64 = await getBase64Font('./THSarabunNew Bold.ttf');
+
+if (fontBase64) {
+    doc.addFileToVFS('THSarabunNew.ttf', fontBase64);
+    doc.addFont('THSarabunNew.ttf', 'THSarabun', 'normal');
+}
+if (fontBoldBase64) {
+    doc.addFileToVFS('THSarabunNew Bold.ttf', fontBoldBase64);
+    doc.addFont('THSarabunNew Bold.ttf', 'THSarabun', 'bold');
+}
+if (fontBase64) doc.setFont('THSarabun', 'normal');
             }
 
             let grandW = 0, grandO = 0, grandBonus = 0, grandLate = 0, grandWithdraw = 0, grandOther = 0, grandSocial = 0, grandNet = 0;
