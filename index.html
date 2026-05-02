@@ -7,7 +7,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
-    <script src="THSarabunNew.js"></script>
+    
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap');
 
@@ -825,7 +825,7 @@
         showPage('main');
     }
 
-    /// =============================================
+   // =============================================
     // PDF EXPORT
     // =============================================
     async function exportPDF() {
@@ -840,11 +840,10 @@
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF('l', 'mm', 'a4');
 
-            // โหลดฟอนต์ไทยจาก CDN ที่เชื่อถือได้
+            // โหลดฟอนต์ไทย
             let fontLoaded = false;
             try {
-                const fontUrl = 'https://cdn.jsdelivr.net/npm/fonts-thai-sarabun@1.0.0/fonts/THSarabunNew.ttf';
-                const res = await fetch(fontUrl);
+                const res = await fetch('https://cdn.jsdelivr.net/npm/fonts-thai-sarabun@1.0.0/fonts/THSarabunNew.ttf');
                 if (res.ok) {
                     const buf = await res.arrayBuffer();
                     const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
@@ -853,94 +852,85 @@
                     doc.setFont('THSarabun', 'normal');
                     fontLoaded = true;
                 }
-            } catch(fe) {
-                console.warn('Font load failed, using fallback', fe);
-            }
+            } catch(fe) { console.warn('Font load failed', fe); }
 
-            const fontName = fontLoaded ? 'THSarabun' : 'helvetica';
+            const fn = fontLoaded ? 'THSarabun' : 'helvetica';
 
             const currentPeriod = parseInt(localStorage.getItem('current_period')) || 1;
             const startDay = currentPeriod === 1 ? 1 : 16;
             const endDay   = currentPeriod === 1 ? 15 : 31;
-            const monthTxt  = localStorage.getItem('current_month_text') || '-';
+            const monthTxt = localStorage.getItem('current_month_text') || '-';
             const periodTxt = currentPeriod === 1 ? "ต้นเดือน (1-15)" : "ปลายเดือน (16-31)";
 
-            doc.setFont(fontName, 'normal');
+            doc.setFont(fn, 'normal');
             doc.setFontSize(18);
             doc.setTextColor(30, 41, 59);
             doc.text(`รายงานสรุปเงินเดือนพนักงาน  รอบ: ${periodTxt}  [ ${monthTxt} ]`, 14, 15);
 
-            let grandW = 0, grandO = 0, grandBonus = 0, grandLate = 0,
-                grandWithdraw = 0, grandOther = 0, grandSocial = 0, grandNet = 0;
-
+            let grandW=0, grandO=0, grandBonus=0, grandLate=0,
+                grandWithdraw=0, grandOther=0, grandSocial=0, grandNet=0;
             let currentY = 22;
+
             const uniqueBranches = [...new Set(employees.map(e => e.branch || 'ไม่ระบุสาขา'))].sort();
 
             for (const branch of uniqueBranches) {
                 const branchEmps = employees.filter(e => (e.branch || 'ไม่ระบุสาขา') === branch);
-                if (branchEmps.length === 0) continue;
+                if (!branchEmps.length) continue;
 
                 doc.setFontSize(13);
-                doc.setFont(fontName, 'normal');
+                doc.setFont(fn, 'normal');
                 doc.setTextColor(79, 70, 229);
                 doc.text(`สาขา: ${branch}`, 14, currentY + 6);
 
-                let branchW = 0, branchO = 0, branchBonus = 0, branchLate = 0,
-                    branchWithdraw = 0, branchOther = 0, branchSocial = 0, branchNet = 0;
+                let bW=0, bO=0, bBonus=0, bLate=0, bWith=0, bOther=0, bSoc=0, bNet=0;
 
                 const tableData = branchEmps.map(e => {
-                    let sumW = 0, sumO = 0, sumLate = 0;
+                    let sumW=0, sumO=0, sumLate=0;
                     for (let d = startDay; d <= endDay; d++) {
                         const l = e.logs && e.logs[d];
                         if (l) {
-                            sumW    += e.role === 'FT' ? (parseFloat(e.wage)||0) : ((parseFloat(e.wage)||0)/9)*(parseFloat(l.workHrs)||0);
+                            sumW    += e.role==='FT' ? (parseFloat(e.wage)||0) : ((parseFloat(e.wage)||0)/9)*(parseFloat(l.workHrs)||0);
                             sumO    += (parseFloat(l.ot)||0) * (parseFloat(e.otRate)||0);
                             sumLate += (parseInt(l.lateMins)||0) * 5;
                         }
                     }
-                    const bonus         = parseFloat(e.bonus)    || 0;
-                    const totalWithdraw = (parseFloat(e.withdraw)||0) + (parseFloat(e.withdraw2)||0);
-                    const other         = parseFloat(e.other)    || 0;
-                    const soc           = parseFloat(e.social)   || 0;
-                    const net = (sumW + sumO + bonus) - (totalWithdraw + other + soc + sumLate);
+                    const bonus = parseFloat(e.bonus)||0;
+                    const totalW = (parseFloat(e.withdraw)||0)+(parseFloat(e.withdraw2)||0);
+                    const other = parseFloat(e.other)||0;
+                    const soc   = parseFloat(e.social)||0;
+                    const net   = (sumW+sumO+bonus)-(totalW+other+soc+sumLate);
 
-                    branchW += sumW; branchO += sumO; branchBonus += bonus;
-                    branchLate += sumLate; branchWithdraw += totalWithdraw;
-                    branchOther += other; branchSocial += soc; branchNet += net;
+                    bW+=sumW; bO+=sumO; bBonus+=bonus; bLate+=sumLate;
+                    bWith+=totalW; bOther+=other; bSoc+=soc; bNet+=net;
 
-                    return [
-                        e.name||'-', e.fullname||'-',
+                    return [e.name||'-', e.fullname||'-',
                         Math.round(sumW).toLocaleString(), Math.round(sumO).toLocaleString(),
                         Math.round(bonus).toLocaleString(), Math.round(sumLate).toLocaleString(),
-                        Math.round(totalWithdraw).toLocaleString(), Math.round(other).toLocaleString(),
-                        Math.round(soc).toLocaleString(), Math.round(net).toLocaleString()
-                    ];
+                        Math.round(totalW).toLocaleString(), Math.round(other).toLocaleString(),
+                        Math.round(soc).toLocaleString(), Math.round(net).toLocaleString()];
                 });
 
-                tableData.push([
-                    'รวมสาขา', '',
-                    Math.round(branchW).toLocaleString(), Math.round(branchO).toLocaleString(),
-                    Math.round(branchBonus).toLocaleString(), Math.round(branchLate).toLocaleString(),
-                    Math.round(branchWithdraw).toLocaleString(), Math.round(branchOther).toLocaleString(),
-                    Math.round(branchSocial).toLocaleString(), Math.round(branchNet).toLocaleString()
-                ]);
+                tableData.push(['รวมสาขา','',
+                    Math.round(bW).toLocaleString(), Math.round(bO).toLocaleString(),
+                    Math.round(bBonus).toLocaleString(), Math.round(bLate).toLocaleString(),
+                    Math.round(bWith).toLocaleString(), Math.round(bOther).toLocaleString(),
+                    Math.round(bSoc).toLocaleString(), Math.round(bNet).toLocaleString()]);
 
-                grandW += branchW; grandO += branchO; grandBonus += branchBonus;
-                grandLate += branchLate; grandWithdraw += branchWithdraw;
-                grandOther += branchOther; grandSocial += branchSocial; grandNet += branchNet;
+                grandW+=bW; grandO+=bO; grandBonus+=bBonus; grandLate+=bLate;
+                grandWithdraw+=bWith; grandOther+=bOther; grandSocial+=bSoc; grandNet+=bNet;
 
-                const subtotalIdx = tableData.length - 1;
+                const subIdx = tableData.length - 1;
 
                 doc.autoTable({
                     startY: currentY + 9,
                     head: [['ชื่อเล่น','ชื่อจริง','รายได้ปกติ','รายได้OT','เงินพิเศษ','หักสาย','หักเบิก','หักอื่นๆ','ประกันสังคม','รายได้สุทธิ']],
                     body: tableData,
                     theme: 'grid',
-                    styles: { font: fontName, fontSize: 11, halign: 'center' },
-                    headStyles: { fillColor: [79,70,229], textColor: 255, fontStyle: 'bold', font: fontName },
-                    columnStyles: { 0: { halign:'left' }, 1: { halign:'left' } },
+                    styles: { font: fn, fontSize: 11, halign: 'center' },
+                    headStyles: { fillColor: [79,70,229], textColor: 255, fontStyle: 'bold', font: fn },
+                    columnStyles: { 0:{halign:'left'}, 1:{halign:'left'} },
                     willDrawCell(data) {
-                        if (data.row.index === subtotalIdx && data.section === 'body') {
+                        if (data.row.index === subIdx && data.section === 'body') {
                             doc.setFillColor(236, 253, 245);
                             doc.setTextColor(5, 150, 105);
                         }
@@ -948,24 +938,20 @@
                 });
 
                 currentY = doc.lastAutoTable.finalY + 10;
-                if (currentY > doc.internal.pageSize.height - 40) {
-                    doc.addPage(); currentY = 15;
-                }
+                if (currentY > doc.internal.pageSize.height - 40) { doc.addPage(); currentY = 15; }
             }
 
             doc.autoTable({
                 startY: currentY,
                 showHead: false,
-                body: [[
-                    'รวมสุทธิทั้งหมด (GRAND TOTAL)', '',
+                body: [['รวมสุทธิทั้งหมด (GRAND TOTAL)','',
                     Math.round(grandW).toLocaleString(), Math.round(grandO).toLocaleString(),
                     Math.round(grandBonus).toLocaleString(), Math.round(grandLate).toLocaleString(),
                     Math.round(grandWithdraw).toLocaleString(), Math.round(grandOther).toLocaleString(),
-                    Math.round(grandSocial).toLocaleString(), Math.round(grandNet).toLocaleString()
-                ]],
+                    Math.round(grandSocial).toLocaleString(), Math.round(grandNet).toLocaleString()]],
                 theme: 'grid',
-                styles: { font: fontName, fontSize: 13, fontStyle: 'bold', textColor: [220,38,38], halign: 'center' },
-                columnStyles: { 0: { halign:'left' } },
+                styles: { font: fn, fontSize: 13, fontStyle: 'bold', textColor: [220,38,38], halign: 'center' },
+                columnStyles: { 0:{halign:'left'} },
                 bodyStyles: { fillColor: [254,242,242] }
             });
 
