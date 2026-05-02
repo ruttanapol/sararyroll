@@ -829,24 +829,23 @@
     // PDF EXPORT — FIX: โครงสร้าง try/catch ถูกต้อง
     // =============================================
     async function getBase64Font(url) {
-        const urls = [
-            'https://raw.githubusercontent.com/googlefonts/thai-collection/main/fonts/THSarabunNew/THSarabunNew.ttf',
-            'https://cdn.jsdelivr.net/gh/googlefonts/thai-collection@main/fonts/THSarabunNew/THSarabunNew.ttf',
-            url
-        ];
-        for (const tryUrl of urls) {
-            try {
-                const res = await fetch(tryUrl);
-                if (!res.ok) continue;
-                const blob = await res.blob();
-                return new Promise((resolve) => {
-                    const reader = new FileReader();
-                    reader.onloadend = () => resolve(reader.result.split(',')[1]);
-                    reader.readAsDataURL(blob);
-                });
-            } catch (e) { continue; }
-        }
-        return null;
+    const urls = [
+        'https://fonts.gstatic.com/s/sarabun/v15/DtVmJx26TKEr37c9YK5sulMJ.woff2',
+        'https://cdn.jsdelivr.net/npm/@fontsource/sarabun@5.0.3/files/sarabun-thai-400-normal.woff2',
+    ];
+    for (const tryUrl of urls) {
+        try {
+            const res = await fetch(tryUrl);
+            if (!res.ok) continue;
+            const blob = await res.blob();
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result.split(',')[1]);
+                reader.readAsDataURL(blob);
+            });
+        } catch (e) { continue; }
+    }
+    return null;
     }
 
     async function exportPDF() {
