@@ -860,6 +860,108 @@
             const periodTxt = currentPeriod === 1 ? "ต้นเดือน (1-15)" : "ปลายเดือน (16-31)";
 
             doc.setFont(fn, 'normal');
+            doc.setFontSize(18);
+            doc.setTextColor(30, 41, 59);
+            doc.text(`รายงานสรุปเงินเดือนพนักงาน  รอบ: ${periodTxt}  [ ${monthTxt} ]`, 14, 15);
+
+            let grandW=0, grandO=0, grandBonus=0, grandLate=0,
+                grandWithdraw=0, grandOther=0, grandSocial=0, grandNet=0;
+            let currentY = 22;
+
+            const uniqueBranches = [...new Set(employees.map(e => e.branch || 'ไม่ระบุสาขา'))].sort();
+
+            for (const branch of uniqueBranches) {
+                const branchEmps = employees.filter(e => (e.branch || 'ไม่ระบุสาขา') === branch);
+                if (!branchEmps.length) continue;
+
+                doc.setFontSize(13);
+                doc.setFont(fn, 'normal');
+                doc.setTextColor(79, 70, 229);
+                doc.text(`สาขา: ${branch}`, 14, currentY + 6);
+
+                let bW=0, bO=0, bBonus=0, bLate=0, bWith=0, bOther=0, bSoc=0, bNet=0;
+
+                const tableData = branchEmps.map(e => {
+                    let sumW=0, sumO=0, sumLate=0;
+                    for (let d = startDay; d <= endDay; d++) {
+                        const l = e.logs && e.logs[d];
+                        if (l) {
+                            sumW    += e.role==='FT' ? (parseFloat(e.wage)||0) : ((parseFloat(e.wage)||0)/9)*(parseFloat(l.workHrs)||0);
+                            sumO    += (parseFloat(l.ot)||0) * (parseFloat(e.otRate)||0);
+                            sumLate += (parseInt(l.lateMins)||0) * 5;
+                        }
+                    }
+                    const bonus  = parseFloat(e.bonus)||0;
+                    const totalW = (parseFloat(e.withdraw)||0) + (parseFloat(e.withdraw2)||0);
+                    const other  = parseFloat(e.other)||0;
+                    const soc    = parseFloat(e.social)||0;
+                    const net    = (sumW+sumO+bonus) - (totalW+other+soc+sumLate);
+
+                    bW+=sumW; bO+=sumO; bBonus+=bonus; bLate+=sumLate;
+                    bWith+=totalW; bOther+=other; bSoc+=soc; bNet+=net;
+
+                    return [e.name||'-', e.fullname||'-',
+                        Math.round(sumW).toLocaleString(), Math.round(sumO).toLocaleString(),
+                        Math.round(bonus).toLocaleString(), Math.round(sumLate).toLocaleString(),
+                        Math.round(totalW).toLocaleString(), Math.round(other).toLocaleString(),
+                        Math.round(soc).toLocaleString(), Math.round(net).toLocaleString()];
+                });
+
+                tableData.push(['รวมสาขา', '',
+                    Math.round(bW).toLocaleString(), Math.round(bO).toLocaleString(),
+                    Math.round(bBonus).toLocaleString(), Math.round(bLate).toLocaleString(),
+                    Math.round(bWith).toLocaleString(), Math.round(bOther).toLocaleString(),
+                    Math.round(bSoc).toLocaleString(), Math.round(bNet).toLocaleString()]);
+
+                grandW+=bW; grandO+=bO; grandBonus+=bBonus; grandLate+=bLate;
+                grandWithdraw+=bWith; grandOther+=bOther; grandSocial+=bSoc; grandNet+=bNet;
+
+                const subIdx = tableData.length - 1;
+
+                doc.autoTable({
+                    startY: currentY + 9,
+                    head: [['ชื่อเล่น','ชื่อจริง','รายได้ปกติ','รายได้OT','เงินพิเศษ','หักสาย','หักเบิก','หักอื่นๆ','ประกันสังคม','รายได้สุทธิ']],
+                    body: tableData,
+                    theme: 'grid',
+                    styles: { font: fn, fontSize: 11, halign: 'center' },
+                    headStyles: { fillColor: [79,70,229], textColor: 255, fontStyle: 'bold', font: fn },
+                    columnStyles: { 0:{halign:'left'}, 1:{halign:'left'} },
+                    willDrawCell(data) {
+                        if (data.row.index === subIdx && data.section === 'body') {
+                            doc.setFillColor(236, 253, 245);
+                            doc.setTextColor(5, 150, 105);
+                        }
+                    }
+                });
+
+                currentY = doc.lastAutoTable.finalY + 10;
+                if (currentY > doc.internal.pageSize.height - 40) { doc.addPage(); currentY = 15; }
+            }
+
+            doc.autoTable({
+                startY: currentY,
+                showHead: false,
+                body: [['รวมสุทธิทั้งหมด (GRAND TOTAL)', '',
+                    Math.round(grandW).toLocaleString(), Math.round(grandO).toLocaleString(),
+                    Math.round(grandBonus).toLocaleString(), Math.round(grandLate).toLocaleString(),
+                    Math.round(grandWithdraw).toLocaleString(), Math.round(grandOther).toLocaleString(),
+                    Math.round(grandSocial).toLocaleString(), Math.round(grandNet).toLocaleString()]],
+                theme: 'grid',
+                styles: { font: fn, fontSize: 13, fontStyle: 'bold', textColor: [220,38,38], halign: 'center' },
+                columnStyles: { 0:{halign:'left'} },
+                bodyStyles: { fillColor: [254,242,242] }
+            });
+
+            doc.save(`salary_report_${periodTxt}_${monthTxt}.pdf`);
+
+        } catch (error) {
+            alert("เกิดข้อผิดพลาด: " + error.message);
+            console.error(error);
+        } finally {
+            btn.innerText = originalText;
+            btn.disabled = false;
+        }
+    }
 </script>
 </body>
 </html>
