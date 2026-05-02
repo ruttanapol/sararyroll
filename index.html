@@ -322,14 +322,45 @@
 </div>
 
 <script>
-    // --- SUPABASE CONFIGURATION[cite: 2] ---
+    <!-- 
+    ✅ วิธีใช้:
+    1. เปิดไฟล์เดิม (index.html) ของคุณ
+    2. หาบรรทัด <script> (บรรทัดเดียว ไม่มีอะไรต่อท้าย) ใกล้ท้ายไฟล์
+    3. ลบทุกอย่างตั้งแต่ <script> ไปจนถึง </script> (รวม tag ด้วย)
+    4. วางโค้ดด้านล่างนี้แทนทั้งหมด
+-->
+
+<script>
+    // --- SUPABASE CONFIGURATION ---
     const SB_URL = "https://kqwajgklgokhwvwjuicw.supabase.co/rest/v1/employees";
     const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtxd2FqZ2tsZ29raHd2d2p1aWN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc2NTQ1NDAsImV4cCI6MjA5MzIzMDU0MH0.6Ye_tTze_Q8VmPAzemtm6wpaalFGNRiZtY7gI2hBScA";
 
+    // ✅ แก้ไข: ดึงข้อมูลจาก Supabase (แต่ละ row = พนักงาน 1 คน)
+    async function loadFromSupabase() {
+        try {
+            const res = await fetch(SB_URL + "?order=created_at.asc", {
+                headers: {
+                    "apikey": SB_KEY,
+                    "Authorization": "Bearer " + SB_KEY
+                }
+            });
+            const rows = await res.json();
+            if (rows && Array.isArray(rows) && rows.length > 0) {
+                employees = rows.map(r => JSON.parse(r.content));
+                localStorage.setItem('db_v5_5_final', JSON.stringify(employees));
+            }
+        } catch (e) { console.error("Supabase Load Error", e); }
+    }
+
+    // ✅ แก้ไข: push แยก row ต่อพนักงาน 1 คน (ไม่ทับ id=1 แล้ว)
     async function pushToSupabase() {
         try {
-            const data = { id: 1, content: JSON.stringify(employees), updated_at: new Date() };
-            await fetch(SB_URL + "?id=eq.1", {
+            const rows = employees.map(emp => ({
+                id: emp.id,
+                content: JSON.stringify(emp),
+                updated_at: new Date()
+            }));
+            await fetch(SB_URL, {
                 method: "POST",
                 headers: {
                     "apikey": SB_KEY,
@@ -337,7 +368,7 @@
                     "Content-Type": "application/json",
                     "Prefer": "resolution=merge-duplicates"
                 },
-                body: JSON.stringify(data)
+                body: JSON.stringify(rows)
             });
         } catch (e) { console.error("Supabase Sync Error", e); }
     }
@@ -350,7 +381,9 @@
     
     let currentUserRole = null; 
 
-    document.addEventListener("DOMContentLoaded", () => {
+    // ✅ แก้ไข: โหลดข้อมูลจาก Supabase ก่อน แล้วค่อยแสดง login
+    document.addEventListener("DOMContentLoaded", async () => {
+        await loadFromSupabase();
         showPage('login');
     });
 
@@ -528,7 +561,7 @@
             employees.push(e);
         }
         localStorage.setItem('db_v5_5_final', JSON.stringify(employees));
-        pushToSupabase(); //[cite: 2]
+        pushToSupabase();
         tempImgBase64 = ""; 
         showPage('main');
     }
@@ -629,7 +662,7 @@
                 }
             }
             localStorage.setItem('db_v5_5_final', JSON.stringify(employees));
-            pushToSupabase(); //[cite: 2]
+            pushToSupabase();
             const msg = periodType === 1 ? "ต้นเดือน" : "ปลายเดือน";
             alert(`ประมวลผลข้อมูล ${msg} สาขา${targetBranch} สำเร็จ! อัปเดตพนักงานได้ ${count} คน`); 
             showPage('main');
@@ -656,7 +689,7 @@
 
         if(field === 'time' && value.trim() === '') delete e.logs[day];
         localStorage.setItem('db_v5_5_final', JSON.stringify(employees));
-        pushToSupabase(); //[cite: 2]
+        pushToSupabase();
         updateCalculations();
     }
 
@@ -757,13 +790,22 @@
         localStorage.setItem('db_v5_5_final', JSON.stringify(employees));
     }
 
-    function deleteEmployee() { 
+    // ✅ แก้ไข: ลบ row ออกจาก Supabase ด้วย ไม่ใช่แค่ใน localStorage
+    async function deleteEmployee() { 
         if(currentUserRole !== 'admin') return;
-        if(confirm('ยืนยันลบข้อมูลพนักงานคนนี้ออกจากระบบถาวร?')) { 
-            employees = employees.filter(x=>x.id!==curId); 
-            localStorage.setItem('db_v5_5_final', JSON.stringify(employees)); 
-            pushToSupabase(); //[cite: 2]
-            showPage('main'); 
+        if(confirm('ยืนยันลบข้อมูลพนักงานคนนี้ออกจากระบบถาวร?')) {
+            try {
+                await fetch(SB_URL + "?id=eq." + curId, {
+                    method: "DELETE",
+                    headers: {
+                        "apikey": SB_KEY,
+                        "Authorization": "Bearer " + SB_KEY
+                    }
+                });
+            } catch(e) { console.error("Delete Error", e); }
+            employees = employees.filter(x => x.id !== curId);
+            localStorage.setItem('db_v5_5_final', JSON.stringify(employees));
+            showPage('main');
         } 
     }
 
@@ -913,6 +955,7 @@
             btn.innerText = originalText;
         }
     }
+</script>
 </script>
 </body>
 </html>
