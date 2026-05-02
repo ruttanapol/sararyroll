@@ -828,25 +828,26 @@
     // =============================================
     // PDF EXPORT — FIX: โครงสร้าง try/catch ถูกต้อง
     // =============================================
-    async function getBase64Font(url) {
-    const urls = [
-        'https://fonts.gstatic.com/s/sarabun/v15/DtVmJx26TKEr37c9YK5sulMJ.woff2',
-        'https://cdn.jsdelivr.net/npm/@fontsource/sarabun@5.0.3/files/sarabun-thai-400-normal.woff2',
-    ];
-    for (const tryUrl of urls) {
-        try {
-            const res = await fetch(tryUrl);
-            if (!res.ok) continue;
-            const blob = await res.blob();
-            return new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.onloadend = () => resolve(reader.result.split(',')[1]);
-                reader.readAsDataURL(blob);
-            });
-        } catch (e) { continue; }
+   async function getBase64Font(type) {
+    const CDN = {
+        normal: 'https://cdn.jsdelivr.net/gh/tayduivn/thai-fonts@main/THSarabunNew/THSarabunNew.ttf',
+        bold:   'https://cdn.jsdelivr.net/gh/tayduivn/thai-fonts@main/THSarabunNew/THSarabunNew%20Bold.ttf'
+    };
+    try {
+        const res = await fetch(CDN[type] || CDN.normal);
+        if (!res.ok) throw new Error('fetch fail');
+        const blob = await res.blob();
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result.split(',')[1]);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+        });
+    } catch (e) {
+        console.warn('Font load failed:', e);
+        return null;
     }
-    return null;
-    }
+}
 
     async function exportPDF() {
         if (currentUserRole !== 'admin') return alert("เฉพาะผู้ดูแลระบบเท่านั้น");
@@ -865,8 +866,8 @@
             const doc = new jsPDF('l', 'mm', 'a4');
 
             // โหลดฟอนต์ภาษาไทย
-            fontBase64     = await getBase64Font('./THSarabunNew.ttf');
-            fontBoldBase64 = await getBase64Font('./THSarabunNew Bold.ttf');
+            fontBase64     = await getBase64Font('normal');
+fontBoldBase64 = await getBase64Font('bold');
 
             if (fontBase64) {
                 doc.addFileToVFS('THSarabunNew.ttf', fontBase64);
