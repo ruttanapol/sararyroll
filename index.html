@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ระบบจัดการเงินเดือน - พระยาสัจจา V5.5 (Mobile + Secured Login)</title>
+    <title>ระบบจัดการเงินเดือน - พระยาสัจจา V5.5 (Fixed)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
@@ -134,7 +134,6 @@
         .upload-zone { background: #ffffff; padding: 25px; border-radius: 16px; border: 1px solid #e2e8f0; transition: 0.3s; box-shadow: 0 4px 15px rgba(0,0,0,0.02); }
         .upload-zone:hover { box-shadow: 0 10px 25px rgba(0,0,0,0.06); border-color: #cbd5e1; }
 
-        /* Mobile Responsiveness */
         @media (max-width: 768px) {
             body { padding: 10px; }
             .nav-bar { flex-direction: column; top: 10px; padding: 10px; }
@@ -153,12 +152,12 @@
 
 <div class="container">
     
-    <!-- หน้าต่าง Login -->
     <div id="page-login" class="card" style="max-width: 400px; margin: 10vh auto; text-align: center;">
         <div style="font-size: 50px; margin-bottom: 10px;">🔐</div>
         <h2 style="color:var(--primary); margin-top:0;">เข้าสู่ระบบจัดการเงินเดือน</h2>
         <p style="color:var(--text-muted); font-size:0.9em; margin-bottom:20px;">กรอกอีเมลของคุณเพื่อเข้าดูข้อมูล</p>
-        <input type="text" id="login-email" placeholder="email@example.com" style="margin-bottom: 20px; text-align:center;">
+        <input type="text" id="login-email" placeholder="email@example.com" style="margin-bottom: 20px; text-align:center;"
+               onkeydown="if(event.key==='Enter') doLogin()">
         <button class="btn btn-main" style="width: 100%;" onclick="doLogin()">🚀 เข้าสู่ระบบ</button>
     </div>
 
@@ -322,18 +321,16 @@
 </div>
 
 <script>
-    // --- SUPABASE CONFIGURATION ---
+    // =============================================
+    // SUPABASE CONFIGURATION
+    // =============================================
     const SB_URL = "https://kqwajgklgokhwvwjuicw.supabase.co/rest/v1/employees";
     const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtxd2FqZ2tsZ29raHd2d2p1aWN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc2NTQ1NDAsImV4cCI6MjA5MzIzMDU0MH0.6Ye_tTze_Q8VmPAzemtm6wpaalFGNRiZtY7gI2hBScA";
 
-    // ✅ แก้ไข: ดึงข้อมูลจาก Supabase (แต่ละ row = พนักงาน 1 คน)
     async function loadFromSupabase() {
         try {
             const res = await fetch(SB_URL + "?order=created_at.asc", {
-                headers: {
-                    "apikey": SB_KEY,
-                    "Authorization": "Bearer " + SB_KEY
-                }
+                headers: { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY }
             });
             const rows = await res.json();
             if (rows && Array.isArray(rows) && rows.length > 0) {
@@ -343,7 +340,6 @@
         } catch (e) { console.error("Supabase Load Error", e); }
     }
 
-    // ✅ แก้ไข: push แยก row ต่อพนักงาน 1 คน (ไม่ทับ id=1 แล้ว)
     async function pushToSupabase() {
         try {
             const rows = employees.map(emp => ({
@@ -363,28 +359,28 @@
             });
         } catch (e) { console.error("Supabase Sync Error", e); }
     }
-    // ----------------------------------------
 
+    // =============================================
+    // GLOBAL STATE
+    // =============================================
     let employees = JSON.parse(localStorage.getItem('db_v5_5_final')) || [];
     let curId = null;
     let editingEmpId = null;
     let tempImgBase64 = "";
-    
-    let currentUserRole = null; 
+    let currentUserRole = null;
 
-    // ✅ แก้ไข: โหลดข้อมูลจาก Supabase ก่อน แล้วค่อยแสดง login
     document.addEventListener("DOMContentLoaded", async () => {
         await loadFromSupabase();
         showPage('login');
     });
 
+    // =============================================
+    // AUTH
+    // =============================================
     function doLogin() {
         const rawInput = document.getElementById('login-email').value.trim();
         const emailInput = rawInput.toLowerCase();
-        
-        if (!rawInput) {
-            alert("กรุณากรอกข้อมูล"); return;
-        }
+        if (!rawInput) { alert("กรุณากรอกข้อมูล"); return; }
 
         if (rawInput === 'Admin8123') {
             currentUserRole = 'admin';
@@ -398,9 +394,9 @@
             if (emp) {
                 currentUserRole = 'employee';
                 document.getElementById('main-nav').classList.remove('hidden');
-                document.getElementById('nav-home').classList.add('hidden'); 
-                document.getElementById('nav-upload').classList.add('hidden'); 
-                document.getElementById('nav-pdf').classList.add('hidden'); 
+                document.getElementById('nav-home').classList.add('hidden');
+                document.getElementById('nav-upload').classList.add('hidden');
+                document.getElementById('nav-pdf').classList.add('hidden');
                 openProfile(emp.id);
             } else {
                 alert("ไม่พบข้อมูลผู้ใช้งานในระบบ");
@@ -416,41 +412,36 @@
         showPage('login');
     }
 
+    // =============================================
+    // PAGE NAVIGATION
+    // =============================================
     function showPage(p) {
-        document.getElementById('page-login').classList.add('hidden');
-        document.getElementById('page-main').classList.add('hidden');
-        document.getElementById('page-upload').classList.add('hidden');
-        document.getElementById('page-form').classList.add('hidden');
-        document.getElementById('page-profile').classList.add('hidden');
-        
+        ['login','main','upload','form','profile'].forEach(pg => {
+            document.getElementById('page-' + pg).classList.add('hidden');
+        });
         document.getElementById('page-' + p).classList.remove('hidden');
-        
-        if(p === 'main' && currentUserRole === 'admin') renderList();
+        if (p === 'main' && currentUserRole === 'admin') renderList();
     }
 
-    function previewImage(input) {
-        if (input.files && input.files[0]) {
-            const reader = new FileReader();
-            reader.onload = (e) => { tempImgBase64 = e.target.result; const preview = document.getElementById('img-preview'); preview.src = tempImgBase64; preview.style.display = 'block'; };
-            reader.readAsDataURL(input.files[0]);
-        }
-    }
-
+    // =============================================
+    // EMPLOYEE LIST
+    // =============================================
     function renderList() {
-        const g = document.getElementById('list-grid'); 
+        const g = document.getElementById('list-grid');
         g.innerHTML = '';
         const branches = ['เมืองชลบุรี', 'ดอนหัวฬ่อ', 'ทองหลาง'];
-        
+
         branches.forEach(b => {
             const branchEmps = employees.filter(e => e.branch === b);
-            if(branchEmps.length > 0) {
+            if (branchEmps.length > 0) {
                 const header = document.createElement('div');
                 header.style.gridColumn = '1 / -1';
                 header.innerHTML = `<h3 style="border-bottom:2px solid var(--primary); padding-bottom:8px; margin-top:10px; color:#1e293b;">📍 สาขา${b}</h3>`;
                 g.appendChild(header);
-
                 branchEmps.forEach(e => {
-                    const d = document.createElement('div'); d.className = 'card clickable'; d.onclick = () => openProfile(e.id);
+                    const d = document.createElement('div');
+                    d.className = 'card clickable';
+                    d.onclick = () => openProfile(e.id);
                     const photoHtml = e.photo ? `<img src="${e.photo}" class="profile-img">` : `<div class="profile-img">👤</div>`;
                     d.innerHTML = `${photoHtml}<div style="text-align:center;"><strong>${e.name}</strong><br><small style="color:var(--text-muted);">${e.role === 'FT' ? 'Full-Time' : 'Part-Time'}</small></div>`;
                     g.appendChild(d);
@@ -458,15 +449,16 @@
             }
         });
 
-        const unassignedEmps = employees.filter(e => !branches.includes(e.branch));
-        if(unassignedEmps.length > 0) {
+        const unassigned = employees.filter(e => !branches.includes(e.branch));
+        if (unassigned.length > 0) {
             const header = document.createElement('div');
             header.style.gridColumn = '1 / -1';
             header.innerHTML = `<h3 style="border-bottom:2px solid #94a3b8; padding-bottom:8px; margin-top:10px; color:#64748b;">📍 ไม่ระบุสาขา</h3>`;
             g.appendChild(header);
-
-            unassignedEmps.forEach(e => {
-                const d = document.createElement('div'); d.className = 'card clickable'; d.onclick = () => openProfile(e.id);
+            unassigned.forEach(e => {
+                const d = document.createElement('div');
+                d.className = 'card clickable';
+                d.onclick = () => openProfile(e.id);
                 const photoHtml = e.photo ? `<img src="${e.photo}" class="profile-img">` : `<div class="profile-img">👤</div>`;
                 d.innerHTML = `${photoHtml}<div style="text-align:center;"><strong>${e.name}</strong><br><small style="color:var(--text-muted);">${e.role === 'FT' ? 'Full-Time' : 'Part-Time'}</small></div>`;
                 g.appendChild(d);
@@ -474,16 +466,28 @@
         }
     }
 
+    // =============================================
+    // EMPLOYEE FORM
+    // =============================================
+    function previewImage(input) {
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                tempImgBase64 = e.target.result;
+                const preview = document.getElementById('img-preview');
+                preview.src = tempImgBase64;
+                preview.style.display = 'block';
+            };
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+
     function openAddEmployeeForm() {
         editingEmpId = null;
         document.getElementById('form-title').innerText = "ลงทะเบียนพนักงานใหม่";
-        document.getElementById('in-name').value = '';
-        document.getElementById('in-fullname').value = '';
-        document.getElementById('in-email').value = '';
+        ['in-name','in-fullname','in-email','in-bank-name','in-bank-no'].forEach(id => document.getElementById(id).value = '');
         document.getElementById('in-branch').value = 'เมืองชลบุรี';
         document.getElementById('in-role').value = 'FT';
-        document.getElementById('in-bank-name').value = '';
-        document.getElementById('in-bank-no').value = '';
         document.getElementById('in-wage').value = '';
         document.getElementById('in-ot').value = '50';
         document.getElementById('img-preview').style.display = 'none';
@@ -504,7 +508,6 @@
         document.getElementById('in-bank-no').value = e.bankNo || '';
         document.getElementById('in-wage').value = e.wage || '';
         document.getElementById('in-ot').value = e.otRate || '50';
-        
         if (e.photo) {
             document.getElementById('img-preview').src = e.photo;
             document.getElementById('img-preview').style.display = 'block';
@@ -518,9 +521,9 @@
 
     function saveEmployee() {
         const name = document.getElementById('in-name').value.trim();
-        if(!name) return alert("ระบุชื่อพนักงาน");
+        if (!name) return alert("ระบุชื่อพนักงาน");
 
-        if(editingEmpId) {
+        if (editingEmpId) {
             const e = employees.find(x => x.id === editingEmpId);
             e.name = name;
             e.fullname = document.getElementById('in-fullname').value.trim();
@@ -534,7 +537,7 @@
             e.otRate = parseFloat(document.getElementById('in-ot').value) || 0;
             editingEmpId = null;
         } else {
-            const e = {
+            employees.push({
                 id: 'id_' + Date.now(),
                 name: name,
                 fullname: document.getElementById('in-fullname').value.trim(),
@@ -548,29 +551,31 @@
                 otRate: parseFloat(document.getElementById('in-ot').value) || 0,
                 bonus: 0, withdraw: 0, withdraw2: 0, other: 0, social: 0, latePenalty: 0,
                 logs: {}
-            };
-            employees.push(e);
+            });
         }
         localStorage.setItem('db_v5_5_final', JSON.stringify(employees));
         pushToSupabase();
-        tempImgBase64 = ""; 
+        tempImgBase64 = "";
         showPage('main');
     }
 
+    // =============================================
+    // FILE UPLOAD & PROCESSING
+    // =============================================
     function handleFileUpload(periodType, targetBranch, fileInputId) {
-        if(currentUserRole !== 'admin') return alert("เฉพาะแอดมินเท่านั้น");
-        
+        if (currentUserRole !== 'admin') return alert("เฉพาะแอดมินเท่านั้น");
         const file = document.getElementById(fileInputId).files[0];
-        if(!file) return alert("กรุณาเลือกไฟล์ Excel ก่อนครับ");
+        if (!file) return alert("กรุณาเลือกไฟล์ Excel ก่อนครับ");
         localStorage.setItem('current_period', periodType);
 
         const reader = new FileReader();
         reader.onload = function(ev) {
             const data = new Uint8Array(ev.target.result);
-            const wb = XLSX.read(data, {type: 'array'});
+            const wb = XLSX.read(data, { type: 'array' });
             const targetSheetName = wb.SheetNames.find(s => s.includes("บันทึกเวลาทำงาน")) || wb.SheetNames[0];
-            const rows = XLSX.utils.sheet_to_json(wb.Sheets[targetSheetName], {header: 1});
-            
+            const rows = XLSX.utils.sheet_to_json(wb.Sheets[targetSheetName], { header: 1 });
+
+            // ดึง period text จากไฟล์
             let periodText = "";
             for (let r = 0; r < Math.min(5, rows.length); r++) {
                 if (!rows[r]) continue;
@@ -586,64 +591,77 @@
             }
             if (periodText) localStorage.setItem('current_month_text', periodText);
 
+            // หา header row (แถวที่มีวันที่)
+            // FIX: ใช้การตรวจสอบที่แม่นยำขึ้น — หาแถวที่มีเลขครบ >= 10 ช่อง
             let headers = [];
-            for(let r=0; r<Math.min(10, rows.length); r++) {
-                if (rows[r] && (rows[r][0] === 1 || rows[r][0] === 15 || rows[r][0] === 16 || rows[r][1] === 1 || rows[r][1] === 16)) {
-                    headers = rows[r]; break;
+            for (let r = 0; r < Math.min(15, rows.length); r++) {
+                if (!rows[r]) continue;
+                const numCount = rows[r].filter(c => !isNaN(c) && c !== '' && c !== null).length;
+                if (numCount >= 10) {
+                    headers = rows[r];
+                    break;
                 }
             }
 
             let count = 0;
-            for(let r=0; r<rows.length; r++) {
+            for (let r = 0; r < rows.length; r++) {
                 const row = rows[r];
-                if(!row) continue;
-                
+                if (!row) continue;
+
                 let rawName = "";
-                for(let c=0; c<row.length; c++) {
-                    if(String(row[c]).includes("ชื่อ:")) {
+                for (let c = 0; c < row.length; c++) {
+                    if (String(row[c]).includes("ชื่อ:")) {
                         rawName = String(row[c+1] || row[c+2] || row[c+3] || '').trim();
                         break;
                     }
                 }
 
-                if(rawName) {
-                    const emp = employees.find(x => x.name.replace(/\s/g,'').toLowerCase() === rawName.replace(/\s/g,'').toLowerCase() && x.branch === targetBranch);
-                    if(emp && r + 1 < rows.length) {
+                if (rawName) {
+                    const emp = employees.find(x =>
+                        x.name.replace(/\s/g,'').toLowerCase() === rawName.replace(/\s/g,'').toLowerCase()
+                        && x.branch === targetBranch
+                    );
+                    if (emp && r + 1 < rows.length) {
                         const timeRow = rows[r+1];
-                        if (periodType === 1) { for(let i=1; i<=15; i++) delete emp.logs[i]; } 
-                        else { for(let i=16; i<=31; i++) delete emp.logs[i]; }
-                        
-                        for(let colIdx = 0; colIdx < timeRow.length; colIdx++) {
+                        // ล้างข้อมูลรอบเดิม
+                        if (periodType === 1) { for (let i = 1; i <= 15; i++) delete emp.logs[i]; }
+                        else { for (let i = 16; i <= 31; i++) delete emp.logs[i]; }
+
+                        for (let colIdx = 0; colIdx < timeRow.length; colIdx++) {
                             const day = headers[colIdx];
-                            const cellVal = String(timeRow[colIdx] || '').replace(/\s/g, ''); 
-                            
-                            if(day && !isNaN(day) && cellVal) {
+                            const cellVal = String(timeRow[colIdx] || '').replace(/\s/g, '');
+                            if (day && !isNaN(day) && cellVal) {
                                 const parsedDay = parseInt(day);
                                 if (periodType === 1 && (parsedDay < 1 || parsedDay > 15)) continue;
                                 if (periodType === 2 && (parsedDay < 16 || parsedDay > 31)) continue;
 
                                 if (cellVal.length >= 9 && cellVal.includes(':')) {
-                                    const tIn = cellVal.substring(0, 5); 
-                                    const tOut = cellVal.substring(5, 10); 
-                                    if(tIn && tOut) {
+                                    const tIn = cellVal.substring(0, 5);
+                                    const tOut = cellVal.substring(5, 10);
+                                    if (tIn && tOut) {
                                         const mIn = toM(tIn);
                                         let mOut = toM(tOut);
-                                        if(mOut < mIn) mOut += 1440; 
+                                        if (mOut < mIn) mOut += 1440;
 
                                         const shifts = [540, 600, 840, 1080];
-                                        const officialStart = shifts.reduce((prev, curr) => Math.abs(curr - mIn) < Math.abs(prev - mIn) ? curr : prev);
+                                        const officialStart = shifts.reduce((prev, curr) =>
+                                            Math.abs(curr - mIn) < Math.abs(prev - mIn) ? curr : prev
+                                        );
                                         const lateMins = mIn > officialStart ? mIn - officialStart : 0;
-                                        
-                                        const calcStart = officialStart; 
                                         const calcEnd = Math.floor(mOut / 60) * 60;
-                                        let totalWorkMins = calcEnd - calcStart;
-                                        if(totalWorkMins < 0) totalWorkMins = 0;
-                                        
+                                        let totalWorkMins = calcEnd - officialStart;
+                                        if (totalWorkMins < 0) totalWorkMins = 0;
+
                                         const totalHrs = totalWorkMins / 60;
                                         const otHrs = totalHrs > 9 ? totalHrs - 9 : 0;
                                         const normalHrs = totalHrs > 9 ? 9 : totalHrs;
 
-                                        emp.logs[parsedDay] = { time: tIn + " - " + tOut, workHrs: normalHrs, ot: otHrs, lateMins: lateMins };
+                                        emp.logs[parsedDay] = {
+                                            time: tIn + " - " + tOut,
+                                            workHrs: normalHrs,
+                                            ot: otHrs,
+                                            lateMins: lateMins
+                                        };
                                     }
                                 }
                             }
@@ -654,77 +672,84 @@
             }
             localStorage.setItem('db_v5_5_final', JSON.stringify(employees));
             pushToSupabase();
-            const msg = periodType === 1 ? "ต้นเดือน" : "ปลายเดือน";
-            alert(`ประมวลผลข้อมูล ${msg} สาขา${targetBranch} สำเร็จ! อัปเดตพนักงานได้ ${count} คน`); 
+            alert(`ประมวลผลข้อมูล${periodType === 1 ? 'ต้นเดือน' : 'ปลายเดือน'} สาขา${targetBranch} สำเร็จ! อัปเดตพนักงานได้ ${count} คน`);
             showPage('main');
         };
         reader.readAsArrayBuffer(file);
     }
 
-    function toM(s) { 
-        if(!s) return 0;
+    function toM(s) {
+        if (!s) return 0;
         const parts = s.replace('.', ':').split(':');
         return (parseInt(parts[0]) * 60) + (parseInt(parts[1]) || 0);
     }
 
-    function editLog(day, field, value) {
-        if(currentUserRole !== 'admin') return; 
-        
-        const e = employees.find(x => x.id === curId);
-        if(!e.logs[day]) e.logs[day] = { time: "", workHrs: 0, ot: 0, lateMins: 0 };
-        
-        if(field === 'time') e.logs[day].time = value;
-        if(field === 'hrs') e.logs[day].workHrs = parseFloat(value) || 0;
-        if(field === 'ot') e.logs[day].ot = parseFloat(value) || 0;
-        if(field === 'late') e.logs[day].lateMins = parseInt(value) || 0;
-
-        if(field === 'time' && value.trim() === '') delete e.logs[day];
-        localStorage.setItem('db_v5_5_final', JSON.stringify(employees));
-        pushToSupabase();
-        updateCalculations();
-    }
-
+    // =============================================
+    // PROFILE & CALCULATIONS
+    // =============================================
     function openProfile(id) {
         curId = id;
         const e = employees.find(x => x.id === id);
-        
         const isEmployee = (currentUserRole === 'employee');
-        
+
         document.getElementById('btn-edit-profile').style.display = isEmployee ? 'none' : 'block';
         document.getElementById('btn-back-home').style.display = isEmployee ? 'none' : 'block';
         document.getElementById('div-delete-btn').style.display = isEmployee ? 'none' : 'block';
-        
-        const inputs = ['adj-bonus', 'adj-withdraw', 'adj-withdraw2', 'adj-other', 'adj-social'];
-        inputs.forEach(inp => {
+
+        const adjFields = ['adj-bonus', 'adj-withdraw', 'adj-withdraw2', 'adj-other', 'adj-social'];
+        adjFields.forEach(inp => {
             const el = document.getElementById(inp);
-            el.value = e[inp.replace('adj-', '')] || 0;
-            if(isEmployee) el.setAttribute('readonly', true);
+            const key = inp.replace('adj-', '');
+            el.value = e[key] || 0;
+            if (isEmployee) el.setAttribute('readonly', true);
             else el.removeAttribute('readonly');
         });
+        // adj-late เป็น readonly เสมอ
+        document.getElementById('adj-late').setAttribute('readonly', true);
 
         document.getElementById('view-name').innerText = e.name;
         document.getElementById('view-fullname').innerText = e.fullname || '-';
         document.getElementById('view-bank-info').innerText = (e.bankName || '-') + " | เลขที่: " + (e.bankNo || '-');
         document.getElementById('view-role-badge').innerText = e.role === 'FT' ? 'Full-Time' : 'Part-Time';
         document.getElementById('view-branch-badge').innerText = "📍 สาขา" + (e.branch || 'ไม่ระบุ');
-        
-        const monthTxt = localStorage.getItem('current_month_text') || '-';
-        document.getElementById('view-month-badge').innerText = "รอบ: " + monthTxt;
-        document.getElementById('view-photo-container').innerHTML = e.photo ? `<img src="${e.photo}" class="profile-img" style="margin:0;">` : `<div class="profile-img" style="margin:0;">👤</div>`;
-        
+        document.getElementById('view-month-badge').innerText = "รอบ: " + (localStorage.getItem('current_month_text') || '-');
+        document.getElementById('view-photo-container').innerHTML = e.photo
+            ? `<img src="${e.photo}" class="profile-img" style="margin:0;">`
+            : `<div class="profile-img" style="margin:0;">👤</div>`;
+
         updateCalculations();
         showPage('profile');
     }
 
+    function editLog(day, field, value) {
+        if (currentUserRole !== 'admin') return;
+        const e = employees.find(x => x.id === curId);
+        if (!e.logs[day]) e.logs[day] = { time: "", workHrs: 0, ot: 0, lateMins: 0 };
+
+        if (field === 'time') e.logs[day].time = value;
+        if (field === 'hrs') e.logs[day].workHrs = parseFloat(value) || 0;
+        if (field === 'ot') e.logs[day].ot = parseFloat(value) || 0;
+        if (field === 'late') e.logs[day].lateMins = parseInt(value) || 0;
+
+        // ถ้าลบเวลาออกให้ลบ log วันนั้นทิ้ง
+        if (field === 'time' && value.trim() === '') delete e.logs[day];
+
+        localStorage.setItem('db_v5_5_final', JSON.stringify(employees));
+        pushToSupabase(); // FIX: sync Supabase ทุกครั้งที่แก้ log
+        updateCalculations();
+    }
+
     function updateCalculations() {
         const e = employees.find(x => x.id === curId);
-        
-        if(currentUserRole === 'admin') {
-            e.bonus = parseFloat(document.getElementById('adj-bonus').value) || 0;
-            e.withdraw = parseFloat(document.getElementById('adj-withdraw').value) || 0;
+        if (!e) return;
+
+        // บันทึกค่า adj เฉพาะ admin
+        if (currentUserRole === 'admin') {
+            e.bonus    = parseFloat(document.getElementById('adj-bonus').value)    || 0;
+            e.withdraw  = parseFloat(document.getElementById('adj-withdraw').value)  || 0;
             e.withdraw2 = parseFloat(document.getElementById('adj-withdraw2').value) || 0;
-            e.other = parseFloat(document.getElementById('adj-other').value) || 0;
-            e.social = parseFloat(document.getElementById('adj-social').value) || 0;
+            e.other    = parseFloat(document.getElementById('adj-other').value)    || 0;
+            e.social   = parseFloat(document.getElementById('adj-social').value)   || 0;
         }
 
         let totalWage = 0, totalOT = 0, totalLatePenalty = 0;
@@ -732,38 +757,36 @@
         tbody.innerHTML = '';
 
         const currentPeriod = parseInt(localStorage.getItem('current_period')) || 1;
-        let startDay = 1, endDay = 31;
-        if (currentPeriod === 1) { startDay = 1; endDay = 15; }
-        else if (currentPeriod === 2) { startDay = 16; endDay = 31; }
-
+        const startDay = currentPeriod === 1 ? 1 : 16;
+        const endDay   = currentPeriod === 1 ? 15 : 31;
         const readOnlyAttr = (currentUserRole === 'employee') ? 'readonly' : '';
 
-        for(let d = startDay; d <= endDay; d++) {
+        for (let d = startDay; d <= endDay; d++) {
             const l = e.logs && e.logs[d];
-            if(l) {
-                let dailyPay = 0;
-                if(e.role === 'FT') { dailyPay = e.wage; } 
-                else { dailyPay = (e.wage / 9) * l.workHrs; }
-                
-                totalWage += dailyPay;
-                totalOT += (l.ot * e.otRate);
-                totalLatePenalty += (l.lateMins * 5); 
+            if (l) {
+                const dailyPay = e.role === 'FT'
+                    ? (parseFloat(e.wage) || 0)
+                    : ((parseFloat(e.wage) || 0) / 9) * (parseFloat(l.workHrs) || 0);
+
+                totalWage        += dailyPay;
+                totalOT          += (parseFloat(l.ot) || 0) * (parseFloat(e.otRate) || 0);
+                totalLatePenalty += (parseInt(l.lateMins) || 0) * 5;
 
                 tbody.innerHTML += `<tr>
                     <td style="font-weight:600;">${d}</td>
-                    <td><input type="text" class="tbl-edit" style="color:var(--success);" value="${l.time}" onchange="editLog(${d}, 'time', this.value)" ${readOnlyAttr}></td>
-                    <td><input type="number" class="tbl-edit" step="0.1" value="${l.workHrs}" onchange="editLog(${d}, 'hrs', this.value)" ${readOnlyAttr}></td>
-                    <td><input type="number" class="tbl-edit" step="0.1" value="${l.ot}" onchange="editLog(${d}, 'ot', this.value)" ${readOnlyAttr}></td>
-                    <td><input type="number" class="tbl-edit" value="${l.lateMins}" onchange="editLog(${d}, 'late', this.value)" ${readOnlyAttr}></td>
-                    <td style="color:var(--danger); font-weight:bold;">${l.lateMins * 5}</td>
+                    <td><input type="text" class="tbl-edit" style="color:var(--success);" value="${l.time}" onchange="editLog(${d},'time',this.value)" ${readOnlyAttr}></td>
+                    <td><input type="number" class="tbl-edit" step="0.1" value="${parseFloat(l.workHrs).toFixed(2)}" onchange="editLog(${d},'hrs',this.value)" ${readOnlyAttr}></td>
+                    <td><input type="number" class="tbl-edit" step="0.1" value="${parseFloat(l.ot).toFixed(2)}" onchange="editLog(${d},'ot',this.value)" ${readOnlyAttr}></td>
+                    <td><input type="number" class="tbl-edit" value="${parseInt(l.lateMins)||0}" onchange="editLog(${d},'late',this.value)" ${readOnlyAttr}></td>
+                    <td style="color:var(--danger); font-weight:bold;">${(parseInt(l.lateMins)||0) * 5}</td>
                 </tr>`;
             } else {
                 tbody.innerHTML += `<tr>
                     <td style="font-weight:600;">${d}</td>
-                    <td><input type="text" class="tbl-edit" placeholder="ยังไม่มีข้อมูล" onchange="editLog(${d}, 'time', this.value)" ${readOnlyAttr}></td>
-                    <td><input type="number" class="tbl-edit" placeholder="0" onchange="editLog(${d}, 'hrs', this.value)" ${readOnlyAttr}></td>
-                    <td><input type="number" class="tbl-edit" placeholder="0" onchange="editLog(${d}, 'ot', this.value)" ${readOnlyAttr}></td>
-                    <td><input type="number" class="tbl-edit" placeholder="0" onchange="editLog(${d}, 'late', this.value)" ${readOnlyAttr}></td>
+                    <td><input type="text" class="tbl-edit" placeholder="ยังไม่มีข้อมูล" onchange="editLog(${d},'time',this.value)" ${readOnlyAttr}></td>
+                    <td><input type="number" class="tbl-edit" placeholder="0" onchange="editLog(${d},'hrs',this.value)" ${readOnlyAttr}></td>
+                    <td><input type="number" class="tbl-edit" placeholder="0" onchange="editLog(${d},'ot',this.value)" ${readOnlyAttr}></td>
+                    <td><input type="number" class="tbl-edit" placeholder="0" onchange="editLog(${d},'late',this.value)" ${readOnlyAttr}></td>
                     <td style="color:var(--danger); font-weight:bold;">0</td>
                 </tr>`;
             }
@@ -771,210 +794,254 @@
 
         e.latePenalty = totalLatePenalty;
         document.getElementById('adj-late').value = totalLatePenalty;
-        
-        const totalWithdraw = e.withdraw + e.withdraw2;
-        const net = (totalWage + totalOT + e.bonus) - (totalWithdraw + e.other + e.social + totalLatePenalty);
-        
+
+        const totalWithdraw = (parseFloat(e.withdraw) || 0) + (parseFloat(e.withdraw2) || 0);
+        const net = (totalWage + totalOT + (parseFloat(e.bonus)||0))
+                  - (totalWithdraw + (parseFloat(e.other)||0) + (parseFloat(e.social)||0) + totalLatePenalty);
+
         document.getElementById('res-wage').innerText = Math.round(totalWage).toLocaleString();
-        document.getElementById('res-ot').innerText = Math.round(totalOT).toLocaleString();
-        document.getElementById('res-net').innerText = Math.round(net).toLocaleString();
+        document.getElementById('res-ot').innerText   = Math.round(totalOT).toLocaleString();
+        document.getElementById('res-net').innerText  = Math.round(net).toLocaleString();
+
         localStorage.setItem('db_v5_5_final', JSON.stringify(employees));
+        // FIX: sync Supabase เมื่อ admin แก้ไข adj fields
+        if (currentUserRole === 'admin') pushToSupabase();
     }
 
-    // ✅ แก้ไข: ลบ row ออกจาก Supabase ด้วย ไม่ใช่แค่ใน localStorage
-    async function deleteEmployee() { 
-        if(currentUserRole !== 'admin') return;
-        if(confirm('ยืนยันลบข้อมูลพนักงานคนนี้ออกจากระบบถาวร?')) {
-            try {
-                await fetch(SB_URL + "?id=eq." + curId, {
-                    method: "DELETE",
-                    headers: {
-                        "apikey": SB_KEY,
-                        "Authorization": "Bearer " + SB_KEY
-                    }
-                });
-            } catch(e) { console.error("Delete Error", e); }
-            employees = employees.filter(x => x.id !== curId);
-            localStorage.setItem('db_v5_5_final', JSON.stringify(employees));
-            showPage('main');
-        } 
-    }
-
-   async function getBase64Font(url) {
-    // ลองหลาย URL สำรอง
-    const urls = [
-        'https://raw.githubusercontent.com/googlefonts/thai-collection/main/fonts/THSarabunNew/THSarabunNew.ttf',
-        'https://cdn.jsdelivr.net/gh/googlefonts/thai-collection@main/fonts/THSarabunNew/THSarabunNew.ttf',
-        url
-    ]; 
-    for (const tryUrl of urls) {
+    // =============================================
+    // DELETE EMPLOYEE
+    // =============================================
+    async function deleteEmployee() {
+        if (currentUserRole !== 'admin') return;
+        if (!confirm('ยืนยันลบข้อมูลพนักงานคนนี้ออกจากระบบถาวร?')) return;
         try {
-            const res = await fetch(tryUrl);
-            if (!res.ok) continue;
-            const blob = await res.blob();
-            return new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.onloadend = () => resolve(reader.result.split(',')[1]);
-                reader.readAsDataURL(blob);
+            await fetch(SB_URL + "?id=eq." + curId, {
+                method: "DELETE",
+                headers: { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY }
             });
-        } catch (e) { continue; }
+        } catch (e) { console.error("Delete Error", e); }
+        employees = employees.filter(x => x.id !== curId);
+        localStorage.setItem('db_v5_5_final', JSON.stringify(employees));
+        showPage('main');
     }
-    return null;
-}
+
+    // =============================================
+    // PDF EXPORT — FIX: โครงสร้าง try/catch ถูกต้อง
+    // =============================================
+    async function getBase64Font(url) {
+        const urls = [
+            'https://raw.githubusercontent.com/googlefonts/thai-collection/main/fonts/THSarabunNew/THSarabunNew.ttf',
+            'https://cdn.jsdelivr.net/gh/googlefonts/thai-collection@main/fonts/THSarabunNew/THSarabunNew.ttf',
+            url
+        ];
+        for (const tryUrl of urls) {
+            try {
+                const res = await fetch(tryUrl);
+                if (!res.ok) continue;
+                const blob = await res.blob();
+                return new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => resolve(reader.result.split(',')[1]);
+                    reader.readAsDataURL(blob);
+                });
+            } catch (e) { continue; }
+        }
+        return null;
+    }
 
     async function exportPDF() {
-    if(currentUserRole !== 'admin') return alert("เฉพาะผู้ดูแลระบบเท่านั้น");
+        if (currentUserRole !== 'admin') return alert("เฉพาะผู้ดูแลระบบเท่านั้น");
 
-    const btn = document.getElementById('nav-pdf');
-    const originalText = btn.innerText;
-    btn.innerText = "กำลังสร้าง PDF...";
-    
-    let fontBase64 = null;      // ✅ ประกาศนอก try
-    let fontBoldBase64 = null;
+        const btn = document.getElementById('nav-pdf');
+        const originalText = btn.innerText;
+        btn.innerText = "กำลังสร้าง PDF...";
+        btn.disabled = true;
 
-    try {
-        const jsPDF = window.jspdf.jsPDF;
-        const doc = new jsPDF('l', 'mm', 'a4');
-        
-        fontBase64 = await getBase64Font('./THSarabunNew.ttf');
-        fontBoldBase64 = await getBase64Font('./THSarabunNew Bold.ttf');
+        // FIX: ประกาศตัวแปรฟอนต์นอก try เพื่อให้ใช้ได้ใน scope ทั้งหมด
+        let fontBase64 = null;
+        let fontBoldBase64 = null;
 
-        if (fontBase64) {
-            doc.addFileToVFS('THSarabunNew.ttf', fontBase64);
-            doc.addFont('THSarabunNew.ttf', 'THSarabun', 'normal');
-        }
-        if (fontBoldBase64) {
-            doc.addFileToVFS('THSarabunNew Bold.ttf', fontBoldBase64);
-            doc.addFont('THSarabunNew Bold.ttf', 'THSarabun', 'bold');
-        }
-        if (fontBase64) doc.setFont('THSarabun', 'normal');
+        try {
+            const jsPDF = window.jspdf.jsPDF;
+            const doc = new jsPDF('l', 'mm', 'a4');
 
-        // ... โค้ดสร้าง PDF ทั้งหมด ...
+            // โหลดฟอนต์ภาษาไทย
+            fontBase64     = await getBase64Font('./THSarabunNew.ttf');
+            fontBoldBase64 = await getBase64Font('./THSarabunNew Bold.ttf');
 
-        doc.save(`salary_report_${periodTxt}.pdf`);  // ✅ ปิด try ตรงนี้
+            if (fontBase64) {
+                doc.addFileToVFS('THSarabunNew.ttf', fontBase64);
+                doc.addFont('THSarabunNew.ttf', 'THSarabun', 'normal');
+            }
+            if (fontBoldBase64) {
+                doc.addFileToVFS('THSarabunNew Bold.ttf', fontBoldBase64);
+                doc.addFont('THSarabunNew Bold.ttf', 'THSarabun', 'bold');
+            }
+            if (fontBase64) doc.setFont('THSarabun', 'normal');
 
-    } catch (error) {
-        alert("เกิดข้อผิดพลาดในการสร้าง PDF");
-        console.error("PDF Generate Error: ", error);
-    } finally {
-        btn.innerText = originalText;
-    }
-}
-
-            let grandW = 0, grandO = 0, grandBonus = 0, grandLate = 0, grandWithdraw = 0, grandOther = 0, grandSocial = 0, grandNet = 0;
-
+            // ---- ข้อมูลรอบเงินเดือน ----
             const currentPeriod = parseInt(localStorage.getItem('current_period')) || 1;
-            let startDay = 1, endDay = 31;
-            if (currentPeriod === 1) { startDay = 1; endDay = 15; }
-            else if (currentPeriod === 2) { startDay = 16; endDay = 31; }
-
-            const monthTxt = localStorage.getItem('current_month_text') || '-';
+            const startDay = currentPeriod === 1 ? 1 : 16;
+            const endDay   = currentPeriod === 1 ? 15 : 31;
+            const monthTxt  = localStorage.getItem('current_month_text') || '-';
             const periodTxt = currentPeriod === 1 ? "ต้นเดือน (1-15)" : "ปลายเดือน (16-31)";
-            
+
+            // ---- หัวรายงาน ----
+            if (fontBase64) doc.setFont('THSarabun', 'bold');
             doc.setFontSize(18);
-            doc.text(`รายงานสรุปเงินเดือนพนักงาน รอบ: ${periodTxt} [ ${monthTxt} ]`, 14, 15);
+            doc.setTextColor(30, 41, 59);
+            doc.text(`รายงานสรุปเงินเดือนพนักงาน  รอบ: ${periodTxt}  [ ${monthTxt} ]`, 14, 15);
+
+            // ---- ตัวรวมยอด grand total ----
+            let grandW = 0, grandO = 0, grandBonus = 0, grandLate = 0,
+                grandWithdraw = 0, grandOther = 0, grandSocial = 0, grandNet = 0;
 
             let currentY = 22;
             const uniqueBranches = [...new Set(employees.map(e => e.branch || 'ไม่ระบุสาขา'))].sort();
 
+            // ---- วนสาขา ----
             for (const branch of uniqueBranches) {
                 const branchEmps = employees.filter(e => (e.branch || 'ไม่ระบุสาขา') === branch);
-                if(branchEmps.length === 0) continue;
+                if (branchEmps.length === 0) continue;
 
-                doc.setFontSize(14);
-                if(fontBase64) doc.setFont('THSarabun', 'bold');
-                doc.setTextColor(30, 41, 59); 
-                doc.text(`📍 สาขา: ${branch}`, 14, currentY + 5);
+                // หัวสาขา
+                doc.setFontSize(13);
+                if (fontBase64) doc.setFont('THSarabun', 'bold');
+                doc.setTextColor(79, 70, 229);
+                doc.text(`สาขา: ${branch}`, 14, currentY + 6);
 
-                let branchW = 0, branchO = 0, branchBonus = 0, branchLate = 0, branchWithdraw = 0, branchOther = 0, branchSocial = 0, branchNet = 0;
+                let branchW = 0, branchO = 0, branchBonus = 0, branchLate = 0,
+                    branchWithdraw = 0, branchOther = 0, branchSocial = 0, branchNet = 0;
 
+                // คำนวณข้อมูลพนักงานแต่ละคน
                 const tableData = branchEmps.map(e => {
                     let sumW = 0, sumO = 0, sumLate = 0;
-                    for(let d = startDay; d <= endDay; d++) {
+                    for (let d = startDay; d <= endDay; d++) {
                         const l = e.logs && e.logs[d];
-                        if(l) {
+                        if (l) {
+                            const wage    = parseFloat(e.wage)    || 0;
+                            const otRate  = parseFloat(e.otRate)  || 0;
                             const workHrs = parseFloat(l.workHrs) || 0;
-                            const ot = parseFloat(l.ot) || 0;
-                            const lateMins = parseInt(l.lateMins) || 0;
-                            const wage = parseFloat(e.wage) || 0;
-                            const otRate = parseFloat(e.otRate) || 0;
-
-                            sumW += (e.role === 'FT' ? wage : (wage / 9) * workHrs);
-                            sumO += (ot * otRate);
-                            sumLate += (lateMins * 5);
+                            const ot      = parseFloat(l.ot)      || 0;
+                            const lateMin = parseInt(l.lateMins)  || 0;
+                            sumW    += e.role === 'FT' ? wage : (wage / 9) * workHrs;
+                            sumO    += ot * otRate;
+                            sumLate += lateMin * 5;
                         }
                     }
-                    
-                    const bonus = parseFloat(e.bonus) || 0;
-                    const withdraw = parseFloat(e.withdraw) || 0;
-                    const withdraw2 = parseFloat(e.withdraw2) || 0;
-                    const totalWithdraw = withdraw + withdraw2;
-                    const other = parseFloat(e.other) || 0;
-                    const soc = parseFloat(e.social) || 0;
+                    const bonus        = parseFloat(e.bonus)    || 0;
+                    const totalWithdraw = (parseFloat(e.withdraw)||0) + (parseFloat(e.withdraw2)||0);
+                    const other        = parseFloat(e.other)    || 0;
+                    const soc          = parseFloat(e.social)   || 0;
                     const net = (sumW + sumO + bonus) - (totalWithdraw + other + soc + sumLate);
-                    
-                    branchW += sumW; branchO += sumO; branchBonus += bonus; branchLate += sumLate;
-                    branchWithdraw += totalWithdraw; branchOther += other; branchSocial += soc; branchNet += net;
+
+                    branchW       += sumW;       branchO       += sumO;
+                    branchBonus   += bonus;      branchLate    += sumLate;
+                    branchWithdraw+= totalWithdraw; branchOther += other;
+                    branchSocial  += soc;        branchNet     += net;
 
                     return [
-                        e.name || '-', e.fullname || '-', Math.round(sumW).toLocaleString(), Math.round(sumO).toLocaleString(), 
-                        Math.round(bonus).toLocaleString(), Math.round(sumLate).toLocaleString(), Math.round(totalWithdraw).toLocaleString(), 
-                        Math.round(other).toLocaleString(), Math.round(soc).toLocaleString(), Math.round(net).toLocaleString()
+                        e.name || '-', e.fullname || '-',
+                        Math.round(sumW).toLocaleString(),
+                        Math.round(sumO).toLocaleString(),
+                        Math.round(bonus).toLocaleString(),
+                        Math.round(sumLate).toLocaleString(),
+                        Math.round(totalWithdraw).toLocaleString(),
+                        Math.round(other).toLocaleString(),
+                        Math.round(soc).toLocaleString(),
+                        Math.round(net).toLocaleString()
                     ];
                 });
 
+                // แถว subtotal สาขา
                 tableData.push([
-                    'รวมสาขา (Subtotal)', '', Math.round(branchW).toLocaleString(), Math.round(branchO).toLocaleString(), 
-                    Math.round(branchBonus).toLocaleString(), Math.round(branchLate).toLocaleString(), Math.round(branchWithdraw).toLocaleString(), 
-                    Math.round(branchOther).toLocaleString(), Math.round(branchSocial).toLocaleString(), Math.round(branchNet).toLocaleString()
+                    'รวมสาขา', '',
+                    Math.round(branchW).toLocaleString(),
+                    Math.round(branchO).toLocaleString(),
+                    Math.round(branchBonus).toLocaleString(),
+                    Math.round(branchLate).toLocaleString(),
+                    Math.round(branchWithdraw).toLocaleString(),
+                    Math.round(branchOther).toLocaleString(),
+                    Math.round(branchSocial).toLocaleString(),
+                    Math.round(branchNet).toLocaleString()
                 ]);
 
-                grandW += branchW; grandO += branchO; grandBonus += branchBonus; grandLate += branchLate;
-                grandWithdraw += branchWithdraw; grandOther += branchOther; grandSocial += branchSocial; grandNet += branchNet;
+                grandW        += branchW;        grandO       += branchO;
+                grandBonus    += branchBonus;    grandLate     += branchLate;
+                grandWithdraw += branchWithdraw; grandOther    += branchOther;
+                grandSocial   += branchSocial;   grandNet      += branchNet;
+
+                const subtotalRowIndex = tableData.length - 1;
 
                 doc.autoTable({
-                    startY: currentY + 8,
-                    head: [['ชื่อเล่น', 'ชื่อจริง', 'รายได้ปกติ', 'รายได้โอที', 'เงินพิเศษ', 'หักสาย', 'หักเบิก', 'หักอื่นๆ', 'ประกันสังคม', 'รายได้สุทธิ']],
+                    startY: currentY + 9,
+                    head: [['ชื่อเล่น','ชื่อจริง','รายได้ปกติ','รายได้OT','เงินพิเศษ','หักสาย','หักเบิก','หักอื่นๆ','ประกันสังคม','รายได้สุทธิ']],
                     body: tableData,
                     theme: 'grid',
-                    styles: { font: fontBase64 ? 'THSarabun' : 'helvetica', fontSize: 11 },
-                    headStyles: { fillColor: [79, 70, 229] }, 
+                    styles: {
+                        font: fontBase64 ? 'THSarabun' : 'helvetica',
+                        fontSize: 11,
+                        halign: 'center'
+                    },
+                    headStyles: { fillColor: [79, 70, 229], textColor: 255, fontStyle: 'bold' },
+                    columnStyles: { 0: { halign: 'left' }, 1: { halign: 'left' } },
                     willDrawCell: function(data) {
-                        if (data.row.index === tableData.length - 1) {
-                            if(fontBase64) doc.setFont('THSarabun', 'bold');
-                            doc.setTextColor(16, 185, 129); 
+                        // แถว subtotal สาขา — ตัวหนา สีเขียว
+                        if (data.row.index === subtotalRowIndex && data.section === 'body') {
+                            doc.setFillColor(236, 253, 245);
+                            if (fontBase64) doc.setFont('THSarabun', 'bold');
+                            doc.setTextColor(5, 150, 105);
                         }
                     }
                 });
 
-                currentY = doc.lastAutoTable.finalY + 8;
-                if(currentY > doc.internal.pageSize.height - 35) {
-                    doc.addPage(); currentY = 15;
+                currentY = doc.lastAutoTable.finalY + 10;
+                if (currentY > doc.internal.pageSize.height - 40) {
+                    doc.addPage();
+                    currentY = 15;
                 }
             }
 
+            // ---- แถว Grand Total ----
             doc.autoTable({
                 startY: currentY,
-                head: [['ชื่อเล่น', 'ชื่อจริง', 'รายได้ปกติ', 'รายได้โอที', 'เงินพิเศษ', 'หักสาย', 'หักเบิก', 'หักอื่นๆ', 'ประกันสังคม', 'รายได้สุทธิ']],
-                showHead: false, 
+                head: [['ชื่อเล่น','ชื่อจริง','รายได้ปกติ','รายได้OT','เงินพิเศษ','หักสาย','หักเบิก','หักอื่นๆ','ประกันสังคม','รายได้สุทธิ']],
+                showHead: false,
                 body: [[
-                    'รวมสุทธิทั้งหมด (GRAND TOTAL)', '', Math.round(grandW).toLocaleString(), Math.round(grandO).toLocaleString(), 
-                    Math.round(grandBonus).toLocaleString(), Math.round(grandLate).toLocaleString(), Math.round(grandWithdraw).toLocaleString(), 
-                    Math.round(grandOther).toLocaleString(), Math.round(grandSocial).toLocaleString(), Math.round(grandNet).toLocaleString()
+                    'รวมสุทธิทั้งหมด (GRAND TOTAL)', '',
+                    Math.round(grandW).toLocaleString(),
+                    Math.round(grandO).toLocaleString(),
+                    Math.round(grandBonus).toLocaleString(),
+                    Math.round(grandLate).toLocaleString(),
+                    Math.round(grandWithdraw).toLocaleString(),
+                    Math.round(grandOther).toLocaleString(),
+                    Math.round(grandSocial).toLocaleString(),
+                    Math.round(grandNet).toLocaleString()
                 ]],
                 theme: 'grid',
-                styles: { font: fontBase64 ? 'THSarabun' : 'helvetica', fontSize: 13, fontStyle: 'bold', textColor: [220, 38, 38] },
-                bodyStyles: { fillColor: [254, 242, 242] } 
+                styles: {
+                    font: fontBase64 ? 'THSarabun' : 'helvetica',
+                    fontSize: 13,
+                    fontStyle: 'bold',
+                    textColor: [220, 38, 38],
+                    halign: 'center'
+                },
+                columnStyles: { 0: { halign: 'left' } },
+                bodyStyles: { fillColor: [254, 242, 242] }
             });
 
-            doc.save(`salary_report_${periodTxt}.pdf`);
+            // ---- บันทึกไฟล์ ----
+            doc.save(`salary_report_${periodTxt}_${monthTxt}.pdf`);
+
         } catch (error) {
-            alert("เกิดข้อผิดพลาดในการสร้าง PDF กรุณาลองใหม่อีกครั้ง");
-            console.error("PDF Generate Error: ", error);
+            alert("เกิดข้อผิดพลาดในการสร้าง PDF กรุณาลองใหม่อีกครั้ง\n" + error.message);
+            console.error("PDF Generate Error:", error);
         } finally {
             btn.innerText = originalText;
+            btn.disabled = false;
         }
     }
+
 </script>
 </body>
 </html>
