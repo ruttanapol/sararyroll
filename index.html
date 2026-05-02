@@ -823,29 +823,43 @@
 }
 
     async function exportPDF() {
-        if(currentUserRole !== 'admin') return alert("เฉพาะผู้ดูแลระบบเท่านั้น");
+    if(currentUserRole !== 'admin') return alert("เฉพาะผู้ดูแลระบบเท่านั้น");
 
-        const btn = document.getElementById('nav-pdf');
-        const originalText = btn.innerText;
-        btn.innerText = "กำลังสร้าง PDF...";
+    const btn = document.getElementById('nav-pdf');
+    const originalText = btn.innerText;
+    btn.innerText = "กำลังสร้าง PDF...";
+    
+    let fontBase64 = null;      // ✅ ประกาศนอก try
+    let fontBoldBase64 = null;
+
+    try {
+        const jsPDF = window.jspdf.jsPDF;
+        const doc = new jsPDF('l', 'mm', 'a4');
         
-        try {
-            const jsPDF = window.jspdf.jsPDF;
-            const doc = new jsPDF('l', 'mm', 'a4');
-            const fontUrl = './THSarabunNew Bold.ttf';
-            const fontBase64 = await getBase64Font('./THSarabunNew.ttf');
-const fontBoldBase64 = await getBase64Font('./THSarabunNew Bold.ttf');
+        fontBase64 = await getBase64Font('./THSarabunNew.ttf');
+        fontBoldBase64 = await getBase64Font('./THSarabunNew Bold.ttf');
 
-if (fontBase64) {
-    doc.addFileToVFS('THSarabunNew.ttf', fontBase64);
-    doc.addFont('THSarabunNew.ttf', 'THSarabun', 'normal');
+        if (fontBase64) {
+            doc.addFileToVFS('THSarabunNew.ttf', fontBase64);
+            doc.addFont('THSarabunNew.ttf', 'THSarabun', 'normal');
+        }
+        if (fontBoldBase64) {
+            doc.addFileToVFS('THSarabunNew Bold.ttf', fontBoldBase64);
+            doc.addFont('THSarabunNew Bold.ttf', 'THSarabun', 'bold');
+        }
+        if (fontBase64) doc.setFont('THSarabun', 'normal');
+
+        // ... โค้ดสร้าง PDF ทั้งหมด ...
+
+        doc.save(`salary_report_${periodTxt}.pdf`);  // ✅ ปิด try ตรงนี้
+
+    } catch (error) {
+        alert("เกิดข้อผิดพลาดในการสร้าง PDF");
+        console.error("PDF Generate Error: ", error);
+    } finally {
+        btn.innerText = originalText;
+    }
 }
-if (fontBoldBase64) {
-    doc.addFileToVFS('THSarabunNew Bold.ttf', fontBoldBase64);
-    doc.addFont('THSarabunNew Bold.ttf', 'THSarabun', 'bold');
-}
-if (fontBase64) doc.setFont('THSarabun', 'normal');
-            }
 
             let grandW = 0, grandO = 0, grandBonus = 0, grandLate = 0, grandWithdraw = 0, grandOther = 0, grandSocial = 0, grandNet = 0;
 
