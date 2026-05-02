@@ -7,7 +7,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
-    
+    <script src="THSarabunNew.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap');
 
@@ -829,33 +829,18 @@
     // PDF EXPORT — FIX: โครงสร้าง try/catch ถูกต้อง
     // =============================================
    async function getBase64Font(type) {
-    const CDN = {
-        normal: 'https://cdn.jsdelivr.net/gh/tayduivn/thai-fonts@main/THSarabunNew/THSarabunNew.ttf',
-        bold:   'https://cdn.jsdelivr.net/gh/tayduivn/thai-fonts@main/THSarabunNew/THSarabunNew%20Bold.ttf'
-    };
-    try {
-        const res = await fetch(CDN[type] || CDN.normal);
-        if (!res.ok) throw new Error('fetch fail');
-        const blob = await res.blob();
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result.split(',')[1]);
-            reader.onerror = reject;
-            reader.readAsDataURL(blob);
-        });
-    } catch (e) {
-        console.warn('Font load failed:', e);
-        return null;
-    }
+     // ใช้จาก window object ที่ THSarabunNew.js inject ไว้แล้ว
+    return null; // ไม่ต้องโหลดเพิ่ม
 }
 
     async function exportPDF() {
         if (currentUserRole !== 'admin') return alert("เฉพาะผู้ดูแลระบบเท่านั้น");
 
-        const btn = document.getElementById('nav-pdf');
-        const originalText = btn.innerText;
-        btn.innerText = "กำลังสร้าง PDF...";
-        btn.disabled = true;
+        const doc = new jsPDF('l', 'mm', 'a4');
+doc.addFileToVFS('THSarabunNew.ttf', window.THSarabunNew_normal);
+doc.addFont('THSarabunNew.ttf', 'THSarabun', 'normal');
+doc.setFont('THSarabun', 'normal');
+let fontBase64 = true; // flag บอกว่าฟอนต์พร้อมใช้;
 
         // FIX: ประกาศตัวแปรฟอนต์นอก try เพื่อให้ใช้ได้ใน scope ทั้งหมด
         let fontBase64 = null;
